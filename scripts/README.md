@@ -9,3 +9,26 @@ already authenticated.
 
 Set `SARAL_AWS_REGION` and the script-specific environment variable described
 in the root README before running either script.
+
+## Demo accounts
+
+The demo users are:
+
+- `testowner@saral.dev`
+- `testsales@saral.dev`
+- `testwarehouse@saral.dev`
+- `testcollection@saral.dev`
+
+Demo passwords are intentionally not stored in repository files. Set or reset
+them securely in Cognito or with the AWS CLI:
+
+```powershell
+aws cognito-idp admin-set-user-password `
+  --user-pool-id <USER_POOL_ID> `
+  --username <EMAIL> `
+  --password <PASSWORD> `
+  --permanent `
+  --region <AWS_REGION> `
+  --profile <AWS_PROFILE>
+```
+  

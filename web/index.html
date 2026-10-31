@@ -45,8 +45,12 @@ label{font-size:12px;color:var(--mut);display:block;margin-bottom:5px;font-weigh
 <script>
 "use strict";
 /* ===== CONFIG (do not add a stage name like /$default to API) =====
-   Supply deployment values without committing them to a public repository. */
-var CONFIG = window.SARAL_CONFIG || {apiBaseUrl:"",region:"",clientId:""};
+   These are public browser configuration values, not AWS credentials. */
+var CONFIG = window.SARAL_CONFIG || {
+  apiBaseUrl:"https://6l4d77b70e.execute-api.ap-south-1.amazonaws.com",
+  region:"ap-south-1",
+  clientId:"6hu70ijugds0pok90cs7nuv1hn"
+};
 var API = CONFIG.apiBaseUrl;
 var REGION = CONFIG.region;
 var CLIENT_ID = CONFIG.clientId;
@@ -265,8 +269,8 @@ function view(){
   if(S.tab==="payments"){
     return '<div class="card"><h2>Record payment</h2><div class="grid"><div><label>Customer *</label><select id="payc"><option value="">Select...</option>'+S.customers.map(function(c){return '<option value="'+esc(c.customerId)+'">'+esc(c.name)+' (dues '+money(S.balances[c.customerId])+')</option>'}).join("")+'</select></div>'+
       '<div><label>Amount *</label><input id="paya" type="number"></div><div><label>Mode</label><select id="paym"><option>cash</option><option>upi</option><option>bank</option><option>cheque</option></select></div><div><label>Notes</label><input id="payn"></div><div><button id="addpay">Record payment</button></div></div></div>'+
-      '<div class="card"><h2>Customer dues</h2><div class="tbl"><table><tr><th>Customer</th><th class="right">Outstanding</th></tr>'+
-      S.customers.map(function(c){return '<tr><td>'+esc(c.name)+'</td><td class="right">'+money(S.balances[c.customerId])+'</td></tr>'}).join("")+'</table></div></div>';
+      '<div class="card"><h2>Customer dues</h2><div class="tbl"><table><tr><th>Customer</th><th class="right">Outstanding</th><th class="right">Action</th></tr>'+
+      S.customers.map(function(c){var due=Number(S.balances[c.customerId]||0);return '<tr><td>'+esc(c.name)+'</td><td class="right">'+money(due)+'</td><td class="right">'+(due>0?'<button class="ok" data-clear-dues="'+esc(c.customerId)+'">Clear dues</button>':'<span class="mut">Paid</span>')+'</td></tr>'}).join("")+'</table></div></div>';
   }
   if(S.tab==="team"){
     var isOwner=r==="Owner";
@@ -337,6 +341,14 @@ function bindView(){
     var cid=v("#payc"),amt=Number(v("#paya")),c=cust(cid);
     if(!c||!(amt>0)){S.msg={t:"err",m:"Select a customer and enter an amount above 0."};render();return}
     act(function(){return api("POST","/payments",{customerId:cid,customerName:c.name,amount:amt,paymentMode:v("#paym"),notes:v("#payn")})},"Payment recorded.");
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-clear-dues]"),function(b){
+    b.onclick=function(){
+      var c=cust(b.dataset.clearDues),amt=Number(S.balances[b.dataset.clearDues]||0);
+      if(!c||!(amt>0)){S.msg={t:"err",m:"This customer has no outstanding dues."};render();return}
+      b.disabled=true;
+      act(function(){return api("POST","/payments",{customerId:c.customerId,customerName:c.name,amount:amt,paymentMode:"cash",notes:"Cleared outstanding dues"})},"Dues cleared for "+c.name+".");
+    };
   });
   on("#addt",function(){
     if(!v("#te")||!v("#tp2")){S.msg={t:"err",m:"Email and temporary password are required."};render();return}

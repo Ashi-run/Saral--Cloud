@@ -112,7 +112,6 @@ do not document real credentials in this repository.
 
 ## Troubleshooting
 
-- The dashboard's **Test connection** button checks API reachability and CORS.
 - Browser errors usually indicate an incorrect API URL or CORS policy.
 - Lambda failures are available in CloudWatch under the corresponding
   `/aws/lambda/<function-name>` log group.

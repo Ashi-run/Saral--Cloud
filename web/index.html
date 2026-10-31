@@ -219,7 +219,7 @@ function loginView(){
   (S.msg?'<div class="msg '+S.msg.t+'">'+esc(S.msg.m)+'</div>':"")+
   '<label>Email</label><input id="em" type="email" autocomplete="username" placeholder="you@company.com"><div style="height:13px"></div>'+
   '<label>Password</label><input id="pw" type="password" autocomplete="current-password" placeholder="Enter your password">'+
-  '<div class="login-actions"><button id="go">Log in</button><button class="sec" id="diag">Test connection</button></div></div></div>';
+  '<div class="login-actions"><button id="go">Log in</button></div></div></div>';
 }
 function bindLogin(){
   var go=function(){
@@ -229,12 +229,6 @@ function bindLogin(){
     login(e,p).then(function(){S.msg=null;S.tab="dash";render();return loadAll()}).catch(function(err){S.msg={t:"err",m:err.message};render()});
   };
   $("#go").onclick=go;$("#pw").onkeydown=function(ev){if(ev.key==="Enter")go()};
-  $("#diag").onclick=function(){
-    try{ensureConfig()}catch(e){S.msg={t:"err",m:e.message};render();return}
-    S.msg={t:"info",m:"Testing "+API+"/orders ..."};render();
-    fetch(API+"/orders").then(function(r){S.msg={t:"good",m:"API reachable and CORS works (HTTP "+r.status+" without login is expected: 401). You can log in."};render()})
-    .catch(function(){S.msg={t:"err",m:"Browser cannot reach the API (CORS or URL problem). Do README Step 2."};render()});
-  };
 }
 function cust(id){for(var i=0;i<S.customers.length;i++)if(S.customers[i].customerId===id)return S.customers[i];return null}
 function statusOf(o){if(o.dispatchStatus)return [o.dispatchStatus,"b-disp"];if(o.isApproved)return ["Approved","b-appr"];return ["Pending approval","b-pend"]}

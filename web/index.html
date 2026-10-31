@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saral Cloud Dashboard</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--ink:#1c2333;--mut:#64708a;--pri:#1f6feb;--ok:#1a7f37;--warn:#b35900;--bad:#c62828;--line:#e3e8f2}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:#12203f;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{font-size:18px;margin:0;flex:1}
+header .who{font-size:13px;opacity:.9}
+button,.btn{background:var(--pri);color:#fff;border:0;border-radius:6px;padding:8px 14px;font-size:14px;cursor:pointer}
+button.sec{background:#e8edf7;color:var(--ink)}
+button.ok{background:var(--ok)} button.bad{background:var(--bad)}
+button:disabled{opacity:.5;cursor:default}
+nav{display:flex;gap:4px;padding:8px 12px;background:#fff;border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{background:transparent;color:var(--mut);border-radius:6px}
+nav button.on{background:#e6efff;color:var(--pri);font-weight:600}
+main{max-width:1100px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.card h2{margin:0 0 12px;font-size:16px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mut);font-weight:600;font-size:12px;text-transform:uppercase}
+.tbl{overflow-x:auto}
+input,select,textarea{width:100%;padding:8px;border:1px solid #cfd7e6;border-radius:6px;font-size:14px;background:#fff}
+label{font-size:12px;color:var(--mut);display:block;margin-bottom:3px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;background:#eee}
+.b-pend{background:#fff1d6;color:var(--warn)} .b-appr{background:#dff5e3;color:var(--ok)} .b-disp{background:#dce9ff;color:var(--pri)}
+.msg{padding:10px 12px;border-radius:6px;margin:10px 0;font-size:14px;white-space:pre-wrap}
+.msg.err{background:#fdecea;color:var(--bad)} .msg.good{background:#e6f6ea;color:var(--ok)} .msg.info{background:#eaf1ff;color:#17408b}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px}
+.kpi b{display:block;font-size:22px;margin-top:4px}
+.login{max-width:380px;margin:50px auto}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.right{text-align:right}.mut{color:var(--mut);font-size:13px}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+"use strict";
+/* ===== CONFIG (do not add a stage name like /$default to API) =====
+   Supply deployment values without committing them to a public repository. */
+var CONFIG = window.SARAL_CONFIG || {apiBaseUrl:"",region:"",clientId:""};
+var API = CONFIG.apiBaseUrl;
+var REGION = CONFIG.region;
+var CLIENT_ID = CONFIG.clientId;
+var ROLES = {
+  Owner: ["dash","orders","customers","products","payments","team"],
+  Manager: ["dash","orders","customers","products","payments","team"],
+  SalesExec: ["dash","orders","customers","products"],
+  WarehouseStaff: ["dash","orders","products"],
+  CollectionExec: ["dash","customers","payments"]
+};
+var TAB_LABEL = {dash:"Dashboard",orders:"Orders",customers:"Customers",products:"Products",payments:"Payments & Dues",team:"Team"};
+
+/* ===== tiny helpers ===== */
+function $(s,r){return (r||document).querySelector(s)}
+function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function money(n){return "₹"+Number(n||0).toLocaleString("en-IN",{maximumFractionDigits:2})}
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return mem[k]||null}}
+var mem={};
+function decode(t){try{var p=t.split(".")[1].replace(/-/g,"+").replace(/_/g,"/");return JSON.parse(decodeURIComponent(escape(atob(p))))}catch(e){return {}}}
+
+/* ===== state ===== */
+var S={user:null,tab:"dash",orders:[],customers:[],products:[],team:[],balances:{},msg:null,loading:false,draft:{lines:[]}};
+
+/* ===== auth (Cognito over plain HTTPS, no SDK) ===== */
+function cognito(target,body){
+  return fetch("https://cognito-idp."+REGION+".amazonaws.com/",{
+    method:"POST",
+    headers:{"Content-Type":"application/x-amz-json-1.1","X-Amz-Target":"AWSCognitoIdentityProviderService."+target},
+    body:JSON.stringify(body)
+  }).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.message||j.__type||("Cognito error "+r.status));return j})});
+}
+function applyTokens(a,refresh){
+  var claims=decode(a.IdToken);
+  var groups=claims["cognito:groups"]||[];
+  if(typeof groups==="string")groups=groups.replace(/[\[\]]/g,"").split(",").map(function(x){return x.trim()}).filter(Boolean);
+  S.user={idToken:a.IdToken,refresh:a.RefreshToken||refresh,email:claims.email,companyId:claims["custom:companyId"],groups:groups,
+          role:groups.filter(function(g){return ROLES[g]})[0]||groups[0]||"",exp:claims.exp};
+  store("saral_session",JSON.stringify({id:a.IdToken,refresh:S.user.refresh}));
+}
+function login(email,pw){
+  return cognito("InitiateAuth",{AuthFlow:"USER_PASSWORD_AUTH",ClientId:CLIENT_ID,AuthParameters:{USERNAME:email,PASSWORD:pw}}).then(function(r){
+    if(r.AuthenticationResult){applyTokens(r.AuthenticationResult);return}
+    if(r.ChallengeName==="NEW_PASSWORD_REQUIRED"){
+      var np=prompt("First login: choose a new password (8+ chars, upper, lower, number, symbol)");
+      if(!np)throw new Error("New password required.");
+      return cognito("RespondToAuthChallenge",{ChallengeName:"NEW_PASSWORD_REQUIRED",ClientId:CLIENT_ID,Session:r.Session,ChallengeResponses:{USERNAME:email,NEW_PASSWORD:np}}).then(function(r2){
+        if(!r2.AuthenticationResult)throw new Error("Could not set new password.");applyTokens(r2.AuthenticationResult)});
+    }
+    throw new Error("Login did not return tokens (challenge: "+(r.ChallengeName||"none")+"). Ask the owner to reset your password.");
+  });
+}
+function refreshSession(){
+  if(!S.user||!S.user.refresh)return Promise.reject(new Error("no refresh"));
+  return cognito("InitiateAuth",{AuthFlow:"REFRESH_TOKEN_AUTH",ClientId:CLIENT_ID,AuthParameters:{REFRESH_TOKEN:S.user.refresh}}).then(function(r){applyTokens(r.AuthenticationResult,S.user.refresh)});
+}
+function logout(){S.user=null;store("saral_session",null);S.orders=[];S.customers=[];S.products=[];S.team=[];render()}
+
+/* ===== API ===== */
+function api(method,path,body,retried){
+  var url=API+path;
+  return fetch(url,{method:method,headers:{"Authorization":S.user.idToken,"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined})
+  .catch(function(e){
+    throw new Error("Network/CORS error calling "+method+" "+url+"\nThis means the browser could not read a response. Run the CORS check in the README (Step 2).");
+  })
+  .then(function(r){
+    if(r.status===401&&!retried){return refreshSession().then(function(){return api(method,path,body,true)}).catch(function(){logout();throw new Error("Session expired, please log in again.")})}
+    return r.text().then(function(t){
+      var j=null;try{j=t?JSON.parse(t):null}catch(e){}
+      if(!r.ok)throw new Error((j&&j.error)||(j&&j.message)||("HTTP "+r.status+" from "+path));
+      return j;
+    });
+  });
+}
+
+/* ===== data loading ===== */
+function loadAll(){
+  S.loading=true;render();
+  var can=function(t){return ROLES[S.user.role]&&ROLES[S.user.role].indexOf(t)>=0};
+  var jobs=[
+    api("GET","/orders").then(function(d){S.orders=(d||[]).sort(function(a,b){return String(b.createdAt).localeCompare(String(a.createdAt))})}),
+    api("GET","/customers").then(function(d){S.customers=(d||[]).sort(function(a,b){return String(a.name).localeCompare(String(b.name))})}),
+    api("GET","/products").then(function(d){S.products=(d||[]).sort(function(a,b){return String(a.name).localeCompare(String(b.name))})})
+  ];
+  if(can("team")&&(S.user.role==="Owner"||S.user.role==="Manager"))jobs.push(api("GET","/team").then(function(d){S.team=d.members||[]}).catch(function(){S.team=[]}));
+  return Promise.all(jobs).then(function(){return loadBalances()}).then(function(){S.loading=false;render()}).catch(function(e){S.loading=false;S.msg={t:"err",m:e.message};render()});
+}
+function loadBalances(){
+  S.balances={};
+  var list=S.customers.slice(),i=0;
+  function worker(){
+    if(i>=list.length)return Promise.resolve();
+    var c=list[i++];
+    return api("GET","/customers/"+encodeURIComponent(c.customerId)+"/ledger").then(function(d){S.balances[c.customerId]=d.balance||0}).catch(function(){S.balances[c.customerId]=0}).then(worker);
+  }
+  return Promise.all([worker(),worker(),worker(),worker()]);
+}
+function act(fn,okMsg){
+  S.msg=null;
+  return Promise.resolve().then(fn).then(function(){S.msg={t:"good",m:okMsg};return loadAll()}).catch(function(e){S.msg={t:"err",m:e.message};render()});
+}
+
+/* ===== CSV ===== */
+function parseCSV(text){
+  var rows=[],row=[],f="",q=false;
+  text=text.replace(/^﻿/,"");
+  for(var i=0;i<text.length;i++){
+    var c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+    else if(c==='"')q=true;
+    else if(c===","){row.push(f);f=""}
+    else if(c==="\n"||c==="\r"){if(c==="\r"&&text[i+1]==="\n")i++;row.push(f);f="";if(row.some(function(x){return x.trim()!==""}))rows.push(row);row=[]}
+    else f+=c;
+  }
+  row.push(f);if(row.some(function(x){return x.trim()!==""}))rows.push(row);
+  if(!rows.length)return [];
+  var head=rows[0].map(function(h){return h.trim().toLowerCase()});
+  return rows.slice(1).map(function(r){var o={};head.forEach(function(h,k){o[h]=(r[k]||"").trim()});return o});
+}
+function importCSV(kind,file){
+  var rd=new FileReader();
+  rd.onload=function(){
+    var rows=parseCSV(String(rd.result)),ok=0,fail=0,errs=[],i=0;
+    S.msg={t:"info",m:"Importing "+rows.length+" rows..."};render();
+    function next(){
+      if(i>=rows.length){S.msg={t:fail?"err":"good",m:"Imported "+ok+" "+kind+", failed "+fail+(errs.length?"\n"+errs.slice(0,5).join("\n"):"")};return loadAll()}
+      var r=rows[i++],path,body;
+      if(kind==="products"){
+        if(!r.name){fail++;errs.push("Row "+i+": name missing");return next()}
+        path="/products";body={name:r.name,category:r.category||"General",uom:r.uom||"pcs",price:Number(r.price||0),stock:r.stock===""||r.stock==null?null:Number(r.stock)};
+      }else{
+        if(!r.name){fail++;errs.push("Row "+i+": name missing");return next()}
+        path="/customers";body={name:r.name,phone:r.phone||"",address:r.address||"",creditLimit:r.creditlimit?Number(r.creditlimit):null};
+      }
+      return api("POST",path,body).then(function(){ok++}).catch(function(e){fail++;errs.push("Row "+i+": "+e.message)}).then(next);
+    }
+    next();
+  };
+  rd.readAsText(file);
+}
+function download(name,text){var a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(text);a.download=name;document.body.appendChild(a);a.click();a.remove()}
+
+/* ===== views ===== */
+function render(){
+  var app=$("#app");
+  if(!S.user){app.innerHTML=loginView();bindLogin();return}
+  var tabs=ROLES[S.user.role]||["dash"];
+  if(tabs.indexOf(S.tab)<0)S.tab=tabs[0];
+  app.innerHTML=
+   '<header><h1>Saral Cloud</h1><span class="who">'+esc(S.user.email)+' &middot; <b>'+esc(S.user.role||"no role")+'</b> &middot; '+esc(S.user.companyId||"")+'</span>'+
+   '<button class="sec" id="rf">Refresh</button><button class="sec" id="lo">Log out</button></header>'+
+   '<nav>'+tabs.map(function(t){return '<button data-t="'+t+'" class="'+(t===S.tab?"on":"")+'">'+TAB_LABEL[t]+'</button>'}).join("")+'</nav>'+
+   '<main>'+(S.msg?'<div class="msg '+S.msg.t+'">'+esc(S.msg.m)+'</div>':"")+(S.loading?'<div class="msg info">Loading...</div>':"")+view()+'</main>';
+  $("#rf").onclick=loadAll;$("#lo").onclick=logout;
+  Array.prototype.forEach.call(document.querySelectorAll("nav button"),function(b){b.onclick=function(){S.tab=b.dataset.t;S.msg=null;render()}});
+  bindView();
+}
+function loginView(){
+  return '<div class="login card"><h2>Saral Cloud Dashboard</h2>'+(S.msg?'<div class="msg '+S.msg.t+'">'+esc(S.msg.m)+'</div>':"")+
+  '<label>Email</label><input id="em" type="email" autocomplete="username"><div style="height:8px"></div>'+
+  '<label>Password</label><input id="pw" type="password" autocomplete="current-password"><div style="height:12px"></div>'+
+  '<div class="row"><button id="go">Log in</button><button class="sec" id="diag">Test connection</button></div></div>';
+}
+function bindLogin(){
+  var go=function(){
+    var e=$("#em").value.trim(),p=$("#pw").value;
+    if(!e||!p){S.msg={t:"err",m:"Enter email and password."};render();return}
+    $("#go").disabled=true;$("#go").textContent="Signing in...";
+    login(e,p).then(function(){S.msg=null;S.tab="dash";render();return loadAll()}).catch(function(err){S.msg={t:"err",m:err.message};render()});
+  };
+  $("#go").onclick=go;$("#pw").onkeydown=function(ev){if(ev.key==="Enter")go()};
+  $("#diag").onclick=function(){
+    S.msg={t:"info",m:"Testing "+API+"/orders ..."};render();
+    fetch(API+"/orders").then(function(r){S.msg={t:"good",m:"API reachable and CORS works (HTTP "+r.status+" without login is expected: 401). You can log in."};render()})
+    .catch(function(){S.msg={t:"err",m:"Browser cannot reach the API (CORS or URL problem). Do README Step 2."};render()});
+  };
+}
+function cust(id){for(var i=0;i<S.customers.length;i++)if(S.customers[i].customerId===id)return S.customers[i];return null}
+function statusOf(o){if(o.dispatchStatus)return [o.dispatchStatus,"b-disp"];if(o.isApproved)return ["Approved","b-appr"];return ["Pending approval","b-pend"]}
+function view(){
+  var r=S.user.role;
+  if(S.tab==="dash"){
+    var pend=S.orders.filter(function(o){return !o.isApproved}).length;
+    var sales=S.orders.filter(function(o){return o.isApproved}).reduce(function(s,o){return s+Number(o.totalAmount||0)},0);
+    var dues=0;for(var k in S.balances)dues+=Math.max(0,S.balances[k]);
+    return '<div class="kpis"><div class="kpi">Orders<b>'+S.orders.length+'</b></div><div class="kpi">Pending approval<b>'+pend+'</b></div><div class="kpi">Approved sales<b>'+money(sales)+'</b></div><div class="kpi">Outstanding dues<b>'+money(dues)+'</b></div><div class="kpi">Customers<b>'+S.customers.length+'</b></div><div class="kpi">Products<b>'+S.products.length+'</b></div></div>'+
+      '<div class="card"><h2>Recent orders</h2>'+ordersTable(S.orders.slice(0,8),false)+'</div>';
+  }
+  if(S.tab==="orders"){
+    var canCreate=["Owner","Manager","SalesExec"].indexOf(r)>=0;
+    return (canCreate?orderForm():"")+'<div class="card"><h2>All orders (whole team)</h2>'+ordersTable(S.orders,true)+'</div>';
+  }
+  if(S.tab==="customers"){
+    var cc=["Owner","Manager","SalesExec"].indexOf(r)>=0;
+    return (cc?'<div class="card"><h2>Add customer</h2><div class="grid"><div><label>Name *</label><input id="cn"></div><div><label>Phone</label><input id="cp"></div><div><label>Address</label><input id="ca"></div><div><label>Credit limit</label><input id="cl" type="number"></div><div><button id="addc">Add customer</button></div></div>'+
+      '<hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><div class="row"><b>Import from CSV</b><input type="file" id="fc" accept=".csv" style="width:auto"><button class="sec" id="tc">Download template</button></div><div class="mut">Columns: name, phone, address, creditLimit</div></div>':"")+
+      '<div class="card"><h2>Customers ('+S.customers.length+')</h2><div class="tbl"><table><tr><th>Name</th><th>Phone</th><th>Address</th><th class="right">Credit limit</th><th class="right">Dues</th></tr>'+
+      S.customers.map(function(c){return '<tr><td>'+esc(c.name)+'</td><td>'+esc(c.phone)+'</td><td>'+esc(c.address)+'</td><td class="right">'+(c.creditLimit!=null?money(c.creditLimit):"-")+'</td><td class="right">'+money(S.balances[c.customerId])+'</td></tr>'}).join("")+'</table></div></div>';
+  }
+  if(S.tab==="products"){
+    var cp=["Owner","Manager"].indexOf(r)>=0;
+    return (cp?'<div class="card"><h2>Add product</h2><div class="grid"><div><label>Name *</label><input id="pn"></div><div><label>Category</label><input id="pc"></div><div><label>Unit</label><input id="pu" value="pcs"></div><div><label>Price</label><input id="pr" type="number"></div><div><label>Stock</label><input id="ps" type="number"></div><div><button id="addp">Add product</button></div></div>'+
+      '<hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><div class="row"><b>Import from CSV</b><input type="file" id="fp" accept=".csv" style="width:auto"><button class="sec" id="tp">Download template</button></div><div class="mut">Columns: name, category, uom, price, stock</div></div>':"")+
+      '<div class="card"><h2>Products ('+S.products.length+')</h2><div class="tbl"><table><tr><th>Name</th><th>Category</th><th>Unit</th><th class="right">Price</th><th class="right">Stock</th></tr>'+
+      S.products.map(function(p){return '<tr><td>'+esc(p.name)+'</td><td>'+esc(p.category)+'</td><td>'+esc(p.uom)+'</td><td class="right">'+money(p.price)+'</td><td class="right">'+(p.stock!=null?esc(p.stock):"-")+'</td></tr>'}).join("")+'</table></div></div>';
+  }
+  if(S.tab==="payments"){
+    return '<div class="card"><h2>Record payment</h2><div class="grid"><div><label>Customer *</label><select id="payc"><option value="">Select...</option>'+S.customers.map(function(c){return '<option value="'+esc(c.customerId)+'">'+esc(c.name)+' (dues '+money(S.balances[c.customerId])+')</option>'}).join("")+'</select></div>'+
+      '<div><label>Amount *</label><input id="paya" type="number"></div><div><label>Mode</label><select id="paym"><option>cash</option><option>upi</option><option>bank</option><option>cheque</option></select></div><div><label>Notes</label><input id="payn"></div><div><button id="addpay">Record payment</button></div></div></div>'+
+      '<div class="card"><h2>Customer dues</h2><div class="tbl"><table><tr><th>Customer</th><th class="right">Outstanding</th></tr>'+
+      S.customers.map(function(c){return '<tr><td>'+esc(c.name)+'</td><td class="right">'+money(S.balances[c.customerId])+'</td></tr>'}).join("")+'</table></div></div>';
+  }
+  if(S.tab==="team"){
+    var isOwner=r==="Owner";
+    return (isOwner?'<div class="card"><h2>Invite teammate</h2><div class="grid"><div><label>Email *</label><input id="te" type="email"></div><div><label>Role *</label><select id="tr"><option>Manager</option><option>SalesExec</option><option>WarehouseStaff</option><option>CollectionExec</option></select></div><div><label>Temporary password *</label><input id="tp2" value=""></div><div><button id="addt">Invite</button></div></div><div class="mut">Password needs 8+ chars with upper, lower, number and symbol. Share it with the teammate.</div></div>':"")+
+      '<div class="card"><h2>Team ('+S.team.length+')</h2><div class="tbl"><table><tr><th>Email</th><th>Role</th><th>Invited</th></tr>'+
+      S.team.map(function(m){return '<tr><td>'+esc(m.email)+'</td><td>'+esc(m.role)+'</td><td>'+esc(m.invitedAt?String(m.invitedAt).slice(0,10):"-")+'</td></tr>'}).join("")+'</table></div></div>';
+  }
+  return "";
+}
+function ordersTable(list,actions){
+  if(!list.length)return '<div class="mut">No orders yet.</div>';
+  var r=S.user.role;
+  var canAppr=["Owner","Manager"].indexOf(r)>=0, canDisp=["Owner","Manager","WarehouseStaff"].indexOf(r)>=0;
+  return '<div class="tbl"><table><tr><th>Order</th><th>Customer</th><th>Items</th><th class="right">Total</th><th>Status</th><th>Date</th>'+(actions?'<th>Action</th>':"")+'</tr>'+
+  list.map(function(o){
+    var st=statusOf(o),a="";
+    if(actions){
+      if(!o.isApproved&&canAppr)a='<button class="ok" data-appr="'+esc(o.orderId)+'">Approve</button>';
+      else if(o.isApproved&&canDisp)a='<select data-disp="'+esc(o.orderId)+'"><option value="">Update status...</option><option>Packed</option><option>Dispatched</option><option>Delivered</option></select>';
+    }
+    var items=(o.items||[]).map(function(i){return esc(i.name)+" x"+esc(i.qty)}).join(", ");
+    return '<tr><td>#'+esc(String(o.orderId).slice(0,8))+'</td><td>'+esc(o.customerName)+'</td><td>'+items+'</td><td class="right">'+money(o.totalAmount)+'</td><td><span class="badge '+st[1]+'">'+esc(st[0])+'</span></td><td>'+esc(String(o.createdAt||"").slice(0,10))+'</td>'+(actions?'<td>'+a+'</td>':"")+'</tr>';
+  }).join("")+'</table></div>';
+}
+function orderForm(){
+  var d=S.draft,total=d.lines.reduce(function(s,l){return s+l.qty*l.price},0);
+  return '<div class="card"><h2>Create order</h2><div class="grid"><div><label>Customer *</label><select id="oc"><option value="">Select...</option>'+
+   S.customers.map(function(c){return '<option value="'+esc(c.customerId)+'"'+(d.customerId===c.customerId?" selected":"")+'>'+esc(c.name)+'</option>'}).join("")+'</select></div>'+
+   '<div><label>Product</label><select id="op"><option value="">Select...</option>'+S.products.map(function(p){return '<option value="'+esc(p.productId)+'">'+esc(p.name)+' ('+money(p.price)+')</option>'}).join("")+'</select></div>'+
+   '<div><label>Qty</label><input id="oq" type="number" value="1" min="1"></div><div><button class="sec" id="oadd">Add item</button></div></div>'+
+   (d.lines.length?'<div class="tbl" style="margin-top:10px"><table><tr><th>Item</th><th class="right">Qty</th><th class="right">Price</th><th class="right">Amount</th><th></th></tr>'+
+     d.lines.map(function(l,i){return '<tr><td>'+esc(l.name)+'</td><td class="right">'+l.qty+'</td><td class="right">'+money(l.price)+'</td><td class="right">'+money(l.qty*l.price)+'</td><td><button class="sec" data-rm="'+i+'">x</button></td></tr>'}).join("")+
+     '<tr><td colspan="3" class="right"><b>Total</b></td><td class="right"><b>'+money(total)+'</b></td><td></td></tr></table></div>':"")+
+   '<div style="margin-top:10px"><button id="osave"'+(d.lines.length?"":" disabled")+'>Place order</button></div></div>';
+}
+function bindView(){
+  var on=function(sel,fn){var e=$(sel);if(e)e.onclick=fn};
+  var v=function(id){var e=$(id);return e?e.value.trim():""};
+  on("#oadd",function(){
+    var pid=v("#op"),q=Number(v("#oq"));S.draft.customerId=v("#oc")||S.draft.customerId;
+    var p=S.products.filter(function(x){return x.productId===pid})[0];
+    if(!p||!(q>0)){S.msg={t:"err",m:"Pick a product and a quantity."};render();return}
+    S.msg=null;S.draft.lines.push({productId:p.productId,name:p.name,qty:q,price:Number(p.price||0)});render();
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-rm]"),function(b){b.onclick=function(){S.draft.customerId=v("#oc")||S.draft.customerId;S.draft.lines.splice(Number(b.dataset.rm),1);render()}});
+  on("#osave",function(){
+    var cid=v("#oc"),c=cust(cid);
+    if(!c){S.msg={t:"err",m:"Select a customer."};render();return}
+    var lines=S.draft.lines.map(function(l){return {productId:l.productId,name:l.name,qty:l.qty,price:l.price,amount:l.qty*l.price}});
+    var total=lines.reduce(function(s,l){return s+l.amount},0);
+    act(function(){return api("POST","/orders",{customerId:cid,customerName:c.name,items:lines,totalAmount:total})},"Order placed.").then(function(){S.draft={lines:[]};render()});
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-appr]"),function(b){b.onclick=function(){b.disabled=true;act(function(){return api("PATCH","/orders/"+encodeURIComponent(b.dataset.appr)+"/approve")},"Order approved and invoice added to ledger.")}});
+  Array.prototype.forEach.call(document.querySelectorAll("[data-disp]"),function(s){s.onchange=function(){if(!s.value)return;act(function(){return api("PATCH","/orders/"+encodeURIComponent(s.dataset.disp)+"/dispatch",{status:s.value})},"Dispatch status updated.")}});
+  on("#addc",function(){
+    if(!v("#cn")){S.msg={t:"err",m:"Customer name is required."};render();return}
+    act(function(){return api("POST","/customers",{name:v("#cn"),phone:v("#cp"),address:v("#ca"),creditLimit:v("#cl")?Number(v("#cl")):null})},"Customer added.");
+  });
+  on("#addp",function(){
+    if(!v("#pn")){S.msg={t:"err",m:"Product name is required."};render();return}
+    act(function(){return api("POST","/products",{name:v("#pn"),category:v("#pc")||"General",uom:v("#pu")||"pcs",price:Number(v("#pr")||0),stock:v("#ps")?Number(v("#ps")):null})},"Product added.");
+  });
+  var fc=$("#fc");if(fc)fc.onchange=function(){if(fc.files[0])importCSV("customers",fc.files[0])};
+  var fp=$("#fp");if(fp)fp.onchange=function(){if(fp.files[0])importCSV("products",fp.files[0])};
+  on("#tc",function(){download("customers-template.csv","name,phone,address,creditLimit\nSharma Traders,9876543210,\"12 Market Road, Pune\",50000\n")});
+  on("#tp",function(){download("products-template.csv","name,category,uom,price,stock\nBasmati Rice 25kg,Grains,bag,1850,40\n")});
+  on("#addpay",function(){
+    var cid=v("#payc"),amt=Number(v("#paya")),c=cust(cid);
+    if(!c||!(amt>0)){S.msg={t:"err",m:"Select a customer and enter an amount above 0."};render();return}
+    act(function(){return api("POST","/payments",{customerId:cid,customerName:c.name,amount:amt,paymentMode:v("#paym"),notes:v("#payn")})},"Payment recorded.");
+  });
+  on("#addt",function(){
+    if(!v("#te")||!v("#tp2")){S.msg={t:"err",m:"Email and temporary password are required."};render();return}
+    act(function(){return api("POST","/team/invite",{email:v("#te"),role:v("#tr"),tempPassword:v("#tp2")})},"Teammate invited. They can log in now.");
+  });
+}
+
+/* ===== boot ===== */
+(function(){
+  try{
+    var s=JSON.parse(store("saral_session")||"null");
+    if(s&&s.id){
+      var c=decode(s.id);
+      if(c.exp*1000>Date.now()+60000){applyTokens({IdToken:s.id},s.refresh);render();loadAll();return}
+      if(s.refresh){S.user={refresh:s.refresh};refreshSession().then(function(){render();loadAll()}).catch(function(){S.user=null;render()});return}
+    }
+  }catch(e){}
+  render();
+})();
+</script>
+</body>
+</html>

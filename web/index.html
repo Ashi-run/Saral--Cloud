@@ -60,6 +60,13 @@ var ROLES = {
   CollectionExec: ["dash","customers","payments"]
 };
 var TAB_LABEL = {dash:"Dashboard",orders:"Orders",customers:"Customers",products:"Products",payments:"Payments & Dues",team:"Team"};
+function ensureConfig(){
+  var missing=[];
+  if(!API)missing.push("apiBaseUrl");
+  if(!REGION)missing.push("region");
+  if(!CLIENT_ID)missing.push("clientId");
+  if(missing.length)throw new Error("Missing SARAL_CONFIG values: "+missing.join(", ")+". Configure the deployment before signing in.");
+}
 
 /* ===== tiny helpers ===== */
 function $(s,r){return (r||document).querySelector(s)}
@@ -74,6 +81,7 @@ var S={user:null,tab:"dash",orders:[],customers:[],products:[],team:[],balances:
 
 /* ===== auth (Cognito over plain HTTPS, no SDK) ===== */
 function cognito(target,body){
+  ensureConfig();
   return fetch("https://cognito-idp."+REGION+".amazonaws.com/",{
     method:"POST",
     headers:{"Content-Type":"application/x-amz-json-1.1","X-Amz-Target":"AWSCognitoIdentityProviderService."+target},
@@ -108,6 +116,7 @@ function logout(){S.user=null;store("saral_session",null);S.orders=[];S.customer
 
 /* ===== API ===== */
 function api(method,path,body,retried){
+  ensureConfig();
   var url=API+path;
   return fetch(url,{method:method,headers:{"Authorization":S.user.idToken,"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined})
   .catch(function(e){
@@ -220,6 +229,7 @@ function bindLogin(){
   };
   $("#go").onclick=go;$("#pw").onkeydown=function(ev){if(ev.key==="Enter")go()};
   $("#diag").onclick=function(){
+    try{ensureConfig()}catch(e){S.msg={t:"err",m:e.message};render();return}
     S.msg={t:"info",m:"Testing "+API+"/orders ..."};render();
     fetch(API+"/orders").then(function(r){S.msg={t:"good",m:"API reachable and CORS works (HTTP "+r.status+" without login is expected: 401). You can log in."};render()})
     .catch(function(){S.msg={t:"err",m:"Browser cannot reach the API (CORS or URL problem). Do README Step 2."};render()});

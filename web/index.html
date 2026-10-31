@@ -70,8 +70,10 @@ var DEMO_ROLES = {
 };
 function teamRole(member){
   var role=member.role||member.roleName||member.group;
+  if(typeof role==="string"&&(!role.trim()||role.trim().toLowerCase()==="unknown"))role=null;
   if(!role&&Array.isArray(member.groups))role=member.groups[0];
   if(!role&&typeof member.groups==="string")role=member.groups.replace(/[\[\]]/g,"").split(",")[0].trim();
+  if(typeof role==="string"&&role.trim().toLowerCase()==="unknown")role=null;
   if(!role)role=DEMO_ROLES[String(member.email||"").toLowerCase()];
   if(!role){
     var email=String(member.email||"").toLowerCase();

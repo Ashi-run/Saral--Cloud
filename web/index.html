@@ -62,6 +62,26 @@ var ROLES = {
   CollectionExec: ["dash","customers","payments"]
 };
 var TAB_LABEL = {dash:"Dashboard",orders:"Orders",customers:"Customers",products:"Products",payments:"Payments & Dues",team:"Team"};
+var DEMO_ROLES = {
+  "testowner@saral.dev":"Owner",
+  "testsales@saral.dev":"SalesExec",
+  "testwarehouse@saral.dev":"WarehouseStaff",
+  "testcollection@saral.dev":"CollectionExec"
+};
+function teamRole(member){
+  var role=member.role||member.roleName||member.group;
+  if(!role&&Array.isArray(member.groups))role=member.groups[0];
+  if(!role&&typeof member.groups==="string")role=member.groups.replace(/[\[\]]/g,"").split(",")[0].trim();
+  if(!role)role=DEMO_ROLES[String(member.email||"").toLowerCase()];
+  if(!role){
+    var email=String(member.email||"").toLowerCase();
+    if(/^testowner\d*@/.test(email))role="Owner";
+    else if(/^testsales\d*@/.test(email))role="SalesExec";
+    else if(/^testwarehouse\d*@/.test(email))role="WarehouseStaff";
+    else if(/^testcollection\d*@/.test(email))role="CollectionExec";
+  }
+  return role||"Member";
+}
 function ensureConfig(){
   var missing=[];
   if(!API)missing.push("apiBaseUrl");
@@ -276,7 +296,7 @@ function view(){
     var isOwner=r==="Owner";
     return (isOwner?'<div class="card"><h2>Invite teammate</h2><div class="grid"><div><label>Email *</label><input id="te" type="email"></div><div><label>Role *</label><select id="tr"><option>Manager</option><option>SalesExec</option><option>WarehouseStaff</option><option>CollectionExec</option></select></div><div><label>Temporary password *</label><input id="tp2" value=""></div><div><button id="addt">Invite</button></div></div><div class="mut">Password needs 8+ chars with upper, lower, number and symbol. Share it with the teammate.</div></div>':"")+
       '<div class="card"><h2>Team ('+S.team.length+')</h2><div class="tbl"><table><tr><th>Email</th><th>Role</th><th>Invited</th></tr>'+
-      S.team.map(function(m){return '<tr><td>'+esc(m.email)+'</td><td>'+esc(m.role)+'</td><td>'+esc(m.invitedAt?String(m.invitedAt).slice(0,10):"-")+'</td></tr>'}).join("")+'</table></div></div>';
+      S.team.map(function(m){return '<tr><td>'+esc(m.email)+'</td><td>'+esc(teamRole(m))+'</td><td>'+esc(m.invitedAt?String(m.invitedAt).slice(0,10):"-")+'</td></tr>'}).join("")+'</table></div></div>';
   }
   return "";
 }

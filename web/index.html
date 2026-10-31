@@ -5,40 +5,38 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Saral Cloud Dashboard</title>
 <style>
-:root{--bg:#f4f6fb;--card:#fff;--ink:#1c2333;--mut:#64708a;--pri:#1f6feb;--ok:#1a7f37;--warn:#b35900;--bad:#c62828;--line:#e3e8f2}
+:root{--bg:#f6f7fb;--card:#fff;--ink:#172033;--mut:#74809a;--pri:#6757e8;--pri-dark:#4b3bc4;--ok:#159b70;--warn:#d9822b;--bad:#d9534f;--line:#e7e9f2;--nav:#171a35}
 *{box-sizing:border-box}
-body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
-header{background:#12203f;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-header h1{font-size:18px;margin:0;flex:1}
-header .who{font-size:13px;opacity:.9}
-button,.btn{background:var(--pri);color:#fff;border:0;border-radius:6px;padding:8px 14px;font-size:14px;cursor:pointer}
-button.sec{background:#e8edf7;color:var(--ink)}
-button.ok{background:var(--ok)} button.bad{background:var(--bad)}
-button:disabled{opacity:.5;cursor:default}
-nav{display:flex;gap:4px;padding:8px 12px;background:#fff;border-bottom:1px solid var(--line);overflow-x:auto}
-nav button{background:transparent;color:var(--mut);border-radius:6px}
-nav button.on{background:#e6efff;color:var(--pri);font-weight:600}
-main{max-width:1100px;margin:0 auto;padding:16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
-.card h2{margin:0 0 12px;font-size:16px}
-table{width:100%;border-collapse:collapse;font-size:14px}
-th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
-th{color:var(--mut);font-weight:600;font-size:12px;text-transform:uppercase}
-.tbl{overflow-x:auto}
-input,select,textarea{width:100%;padding:8px;border:1px solid #cfd7e6;border-radius:6px;font-size:14px;background:#fff}
-label{font-size:12px;color:var(--mut);display:block;margin-bottom:3px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end}
-.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;background:#eee}
-.b-pend{background:#fff1d6;color:var(--warn)} .b-appr{background:#dff5e3;color:var(--ok)} .b-disp{background:#dce9ff;color:var(--pri)}
-.msg{padding:10px 12px;border-radius:6px;margin:10px 0;font-size:14px;white-space:pre-wrap}
-.msg.err{background:#fdecea;color:var(--bad)} .msg.good{background:#e6f6ea;color:var(--ok)} .msg.info{background:#eaf1ff;color:#17408b}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
-.kpi{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px}
-.kpi b{display:block;font-size:22px;margin-top:4px}
-.login{max-width:380px;margin:50px auto}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.right{text-align:right}.mut{color:var(--mut);font-size:13px}
-.hidden{display:none}
+body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+button,.btn{background:var(--pri);color:#fff;border:0;border-radius:9px;padding:10px 15px;font-size:14px;font-weight:650;cursor:pointer;transition:transform .15s,background .15s,box-shadow .15s}
+button:hover{background:var(--pri-dark);transform:translateY(-1px);box-shadow:0 5px 14px #6757e833}
+button.sec{background:#eef0f8;color:var(--ink)}button.sec:hover{background:#e1e4f2}
+button.ok{background:var(--ok)}button.bad{background:var(--bad)}button:disabled{opacity:.5;cursor:default;transform:none;box-shadow:none}
+.shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.sidebar{background:var(--nav);color:#fff;padding:25px 16px;display:flex;flex-direction:column;gap:25px}
+.brand{display:flex;align-items:center;gap:10px;font-size:19px;font-weight:800;letter-spacing:-.4px;padding:0 10px}
+.brand-mark{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,#8274ff,#45d6b1);font-weight:900}
+.brand small{display:block;color:#9da4c4;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+nav{display:flex;flex-direction:column;gap:5px}
+nav button{background:transparent;color:#aeb3d0;text-align:left;border-radius:10px;font-weight:550;padding:11px 12px}
+nav button.on,nav button:hover{background:#2b2e52;color:#fff;box-shadow:none;transform:none}
+.side-bottom{margin-top:auto;color:#aeb3d0;font-size:12px;padding:12px 10px;border-top:1px solid #303452}
+.workspace{min-width:0}.topbar{height:76px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 34px}
+.topbar h1{font-size:20px;margin:0}.topbar .who{font-size:12px;color:var(--mut);margin-top:4px;display:block}
+.top-actions{display:flex;gap:8px;align-items:center}.avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#e6e2ff;color:var(--pri-dark);font-weight:800}
+main{max-width:1250px;margin:0 auto;padding:30px 34px}.eyebrow{font-size:12px;color:var(--pri);font-weight:800;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:7px}.page-title{font-size:28px;letter-spacing:-.8px;margin:0 0 5px}.page-subtitle{color:var(--mut);margin:0 0 24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:18px;box-shadow:0 8px 24px #30376b08}.card h2{margin:0 0 16px;font-size:16px}.card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:15px}.card-head h2{margin:0}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:12px 9px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--mut);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.5px}tr:last-child td{border-bottom:0}.tbl{overflow-x:auto}
+input,select,textarea{width:100%;padding:10px;border:1px solid #d9dcea;border-radius:9px;font-size:14px;background:#fff;color:var(--ink);outline:none}input:focus,select:focus{border-color:var(--pri);box-shadow:0 0 0 3px #6757e81c}
+label{font-size:12px;color:var(--mut);display:block;margin-bottom:5px;font-weight:650}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end}
+.badge{display:inline-block;padding:4px 9px;border-radius:20px;font-size:12px;font-weight:700;background:#eee}.b-pend{background:#fff1d6;color:var(--warn)}.b-appr{background:#dff5e3;color:var(--ok)}.b-disp{background:#e5e2ff;color:var(--pri-dark)}
+.msg{padding:12px 15px;border-radius:10px;margin:0 0 18px;font-size:14px;white-space:pre-wrap}.msg.err{background:#fdecea;color:var(--bad)}.msg.good{background:#e6f6ea;color:var(--ok)}.msg.info{background:#eaf1ff;color:#17408b}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}.kpi{background:#fff;border:1px solid var(--line);border-radius:15px;padding:17px;position:relative;overflow:hidden}.kpi:after{content:"";position:absolute;width:60px;height:60px;border-radius:50%;right:-24px;top:-23px;background:#ece9ff}.kpi .label{color:var(--mut);font-size:12px;font-weight:650}.kpi b{display:block;font-size:25px;margin-top:9px;letter-spacing:-.5px}.kpi .trend{font-size:11px;color:var(--ok);font-weight:700;margin-top:8px}
+.dash-grid{display:grid;grid-template-columns:1.45fr 1fr;gap:18px}.hero{background:linear-gradient(120deg,#5b4cd7,#8174f1);border:0;color:#fff;min-height:150px;display:flex;align-items:center;justify-content:space-between;overflow:hidden}.hero h2{font-size:23px;margin-bottom:7px}.hero p{color:#e5e2ff;margin:0;max-width:460px}.hero-art{font-size:80px;opacity:.22;transform:rotate(-12deg);margin-right:25px}.quick-list{display:grid;gap:9px}.quick-list button{display:flex;justify-content:space-between;align-items:center;background:#f8f8fc;color:var(--ink);box-shadow:none;text-align:left}.quick-list button:hover{background:#efedff;color:var(--pri-dark)}
+.login-wrap{min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at 15% 20%,#e6e2ff,transparent 32%),linear-gradient(135deg,#f8f9fd,#eeeff9)}.login{width:min(410px,calc(100% - 32px));margin:0!important;padding:30px}.login .brand{color:var(--nav);padding:0;margin-bottom:28px}.login h2{font-size:25px;margin-bottom:7px}.login-intro{color:var(--mut);font-size:14px;margin:0 0 24px}.login-actions{display:flex;gap:8px;margin-top:15px}.login-actions button{flex:1}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.right{text-align:right}.mut{color:var(--mut);font-size:13px}.hidden{display:none}.section-note{color:var(--mut);font-size:13px;margin-top:-8px;margin-bottom:14px}
+@media(max-width:850px){.shell{grid-template-columns:1fr}.sidebar{padding:12px 16px;gap:12px}.brand{padding:0}.sidebar nav{flex-direction:row;overflow-x:auto}.sidebar nav button{white-space:nowrap}.side-bottom{display:none}.topbar{height:auto;padding:17px 20px}.top-actions .who{display:none}main{padding:23px 18px}.kpis{grid-template-columns:repeat(2,1fr)}.dash-grid{grid-template-columns:1fr}.hero-art{font-size:55px;margin-right:5px}}
+@media(max-width:480px){.kpis{grid-template-columns:1fr 1fr;gap:9px}.kpi{padding:13px}.kpi b{font-size:20px}.page-title{font-size:24px}.hero-art{display:none}}
 </style>
 </head>
 <body>
@@ -205,20 +203,23 @@ function render(){
   if(!S.user){app.innerHTML=loginView();bindLogin();return}
   var tabs=ROLES[S.user.role]||["dash"];
   if(tabs.indexOf(S.tab)<0)S.tab=tabs[0];
-  app.innerHTML=
-   '<header><h1>Saral Cloud</h1><span class="who">'+esc(S.user.email)+' &middot; <b>'+esc(S.user.role||"no role")+'</b> &middot; '+esc(S.user.companyId||"")+'</span>'+
-   '<button class="sec" id="rf">Refresh</button><button class="sec" id="lo">Log out</button></header>'+
+  var initials=String(S.user.email||"S").charAt(0).toUpperCase();
+  app.innerHTML='<div class="shell"><aside class="sidebar"><div class="brand"><span class="brand-mark">S</span><span>Saral Cloud<small>business command center</small></span></div>'+
    '<nav>'+tabs.map(function(t){return '<button data-t="'+t+'" class="'+(t===S.tab?"on":"")+'">'+TAB_LABEL[t]+'</button>'}).join("")+'</nav>'+
-   '<main>'+(S.msg?'<div class="msg '+S.msg.t+'">'+esc(S.msg.m)+'</div>':"")+(S.loading?'<div class="msg info">Loading...</div>':"")+view()+'</main>';
+   '<div class="side-bottom">Signed in as<br><b>'+esc(S.user.role||"Member")+'</b></div></aside><section class="workspace">'+
+   '<header class="topbar"><div><h1>'+TAB_LABEL[S.tab]+'</h1><span class="who">'+esc(S.user.email)+' &middot; '+esc(S.user.companyId||"")+'</span></div><div class="top-actions"><button class="sec" id="rf">Refresh</button><button class="sec" id="lo">Log out</button><span class="avatar">'+initials+'</span></div></header>'+
+   '<main>'+(S.msg?'<div class="msg '+S.msg.t+'">'+esc(S.msg.m)+'</div>':"")+(S.loading?'<div class="msg info">Refreshing your workspace...</div>':"")+view()+'</main></section></div>';
   $("#rf").onclick=loadAll;$("#lo").onclick=logout;
-  Array.prototype.forEach.call(document.querySelectorAll("nav button"),function(b){b.onclick=function(){S.tab=b.dataset.t;S.msg=null;render()}});
+  Array.prototype.forEach.call(document.querySelectorAll("[data-t]"),function(b){b.onclick=function(){S.tab=b.dataset.t;S.msg=null;render()}});
   bindView();
 }
 function loginView(){
-  return '<div class="login card"><h2>Saral Cloud Dashboard</h2>'+(S.msg?'<div class="msg '+S.msg.t+'">'+esc(S.msg.m)+'</div>':"")+
-  '<label>Email</label><input id="em" type="email" autocomplete="username"><div style="height:8px"></div>'+
-  '<label>Password</label><input id="pw" type="password" autocomplete="current-password"><div style="height:12px"></div>'+
-  '<div class="row"><button id="go">Log in</button><button class="sec" id="diag">Test connection</button></div></div>';
+  return '<div class="login-wrap"><div class="login card"><div class="brand"><span class="brand-mark">S</span><span>Saral Cloud<small>business command center</small></span></div>'+
+  '<h2>Welcome back</h2><p class="login-intro">Sign in to see what is moving across your business today.</p>'+
+  (S.msg?'<div class="msg '+S.msg.t+'">'+esc(S.msg.m)+'</div>':"")+
+  '<label>Email</label><input id="em" type="email" autocomplete="username" placeholder="you@company.com"><div style="height:13px"></div>'+
+  '<label>Password</label><input id="pw" type="password" autocomplete="current-password" placeholder="Enter your password">'+
+  '<div class="login-actions"><button id="go">Log in</button><button class="sec" id="diag">Test connection</button></div></div></div>';
 }
 function bindLogin(){
   var go=function(){
@@ -239,12 +240,15 @@ function cust(id){for(var i=0;i<S.customers.length;i++)if(S.customers[i].custome
 function statusOf(o){if(o.dispatchStatus)return [o.dispatchStatus,"b-disp"];if(o.isApproved)return ["Approved","b-appr"];return ["Pending approval","b-pend"]}
 function view(){
   var r=S.user.role;
+  var perms=ROLES[r]||["dash"];
   if(S.tab==="dash"){
     var pend=S.orders.filter(function(o){return !o.isApproved}).length;
     var sales=S.orders.filter(function(o){return o.isApproved}).reduce(function(s,o){return s+Number(o.totalAmount||0)},0);
     var dues=0;for(var k in S.balances)dues+=Math.max(0,S.balances[k]);
-    return '<div class="kpis"><div class="kpi">Orders<b>'+S.orders.length+'</b></div><div class="kpi">Pending approval<b>'+pend+'</b></div><div class="kpi">Approved sales<b>'+money(sales)+'</b></div><div class="kpi">Outstanding dues<b>'+money(dues)+'</b></div><div class="kpi">Customers<b>'+S.customers.length+'</b></div><div class="kpi">Products<b>'+S.products.length+'</b></div></div>'+
-      '<div class="card"><h2>Recent orders</h2>'+ordersTable(S.orders.slice(0,8),false)+'</div>';
+    return '<div class="eyebrow">Good to see you, '+esc(String(S.user.email||"").split("@")[0])+'</div><h2 class="page-title">Here is your business at a glance.</h2><p class="page-subtitle">Track orders, cash flow, and your team from one calm workspace.</p>'+
+      '<div class="card hero"><div><h2>Keep the momentum going</h2><p>'+ (pend?pend+" orders are waiting for approval.":"Everything is up to date.")+'</p></div><div class="hero-art">✦</div></div>'+
+      '<div class="kpis"><div class="kpi"><span class="label">Total orders</span><b>'+S.orders.length+'</b><span class="trend">↗ All activity</span></div><div class="kpi"><span class="label">Pending approval</span><b>'+pend+'</b><span class="trend">'+(pend?"Needs attention":"All clear")+'</span></div><div class="kpi"><span class="label">Approved sales</span><b>'+money(sales)+'</b><span class="trend">↗ Recorded sales</span></div><div class="kpi"><span class="label">Outstanding dues</span><b>'+money(dues)+'</b><span class="trend">'+S.customers.length+' customers</span></div></div>'+
+      '<div class="dash-grid"><div class="card"><div class="card-head"><h2>Recent orders</h2><button class="sec" data-t="orders">View all</button></div>'+ordersTable(S.orders.slice(0,6),false)+'</div><div class="card"><h2>Quick actions</h2><div class="quick-list">'+(perms.indexOf("orders")>=0?'<button data-t="orders">Create an order <span>→</span></button>':"")+(perms.indexOf("customers")>=0?'<button data-t="customers">Add a customer <span>→</span></button>':"")+(perms.indexOf("products")>=0?'<button data-t="products">Manage products <span>→</span></button>':"")+(perms.indexOf("payments")>=0?'<button data-t="payments">Record payment <span>→</span></button>':"")+'</div><div class="section-note" style="margin-top:20px">Inventory: <b>'+S.products.length+'</b> products &middot; Team access is role-based.</div></div></div>';
   }
   if(S.tab==="orders"){
     var canCreate=["Owner","Manager","SalesExec"].indexOf(r)>=0;

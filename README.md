@@ -40,8 +40,9 @@ only the permissions needed for this deployment.
 
 ## Configure the web client
 
-Before deploying, open `web/index.html` and set `window.SARAL_CONFIG` near the
-top of the script:
+Before deploying, copy the template from `web/config.example.js` into a
+deployment-specific configuration and set `window.SARAL_CONFIG` near the top
+of the script:
 
 ```js
 window.SARAL_CONFIG = {
@@ -122,3 +123,9 @@ do not document real credentials in this repository.
 
 No license has been selected yet. Add a license before distributing this
 project beyond your organization.
+
+## Contributing
+
+Keep deployment values out of Git, validate PowerShell syntax before changing
+deployment scripts, and test the dashboard in a browser after changing
+`web/index.html`. See [SECURITY.md](SECURITY.md) for reporting guidance.

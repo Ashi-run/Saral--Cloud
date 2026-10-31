@@ -230,7 +230,7 @@ function render(){
   var tabs=ROLES[S.user.role]||["dash"];
   if(tabs.indexOf(S.tab)<0)S.tab=tabs[0];
   var initials=String(S.user.email||"S").charAt(0).toUpperCase();
-  app.innerHTML='<div class="shell"><aside class="sidebar"><div class="brand"><img class="brand-mark" src="saral-logo.jpeg" alt="Saral logo"><span>Saral Cloud<small>business command center</small></span></div>'+
+  app.innerHTML='<div class="shell"><aside class="sidebar"><div class="brand"><img class="brand-mark" src="saral-logo.jpeg" alt="Saral logo"><span>Saral Cloud<small>Business Made Simple</small></span></div>'+
    '<nav>'+tabs.map(function(t){return '<button data-t="'+t+'" class="'+(t===S.tab?"on":"")+'">'+TAB_LABEL[t]+'</button>'}).join("")+'</nav>'+
    '<div class="side-bottom">Signed in as<br><b>'+esc(S.user.role||"Member")+'</b></div></aside><section class="workspace">'+
    '<header class="topbar"><div><h1>'+TAB_LABEL[S.tab]+'</h1><span class="who">'+esc(S.user.email)+' &middot; '+esc(S.user.companyId||"")+'</span></div><div class="top-actions"><button class="sec" id="rf">Refresh</button><button class="sec" id="lo">Log out</button><span class="avatar">'+initials+'</span></div></header>'+
@@ -240,7 +240,7 @@ function render(){
   bindView();
 }
 function loginView(){
-  return '<div class="login-wrap"><div class="login card"><div class="brand"><img class="brand-mark" src="saral-logo.jpeg" alt="Saral logo"><span>Saral Cloud<small>business command center</small></span></div>'+
+  return '<div class="login-wrap"><div class="login card"><div class="brand"><img class="brand-mark" src="saral-logo.jpeg" alt="Saral logo"><span>Saral Cloud<small>Business Made Simple</small></span></div>'+
   '<h2>Welcome back</h2><p class="login-intro">Sign in to see what is moving across your business today.</p>'+
   (S.msg?'<div class="msg '+S.msg.t+'">'+esc(S.msg.m)+'</div>':"")+
   '<label>Email</label><input id="em" type="email" autocomplete="username" placeholder="you@company.com"><div style="height:13px"></div>'+
